@@ -48,12 +48,8 @@ def train(params: Dict[str, Any]) -> None:
     """
     subtrips, masks = load_data('data')
     
-    dataset = Dataset()
-    dataset.data = subtrips
-    dataset.masks = masks
-    
     P = Preprocessor(params)
-    train = P.preprocess(dataset)
+    train = P.preprocess(subtrips, masks)
     
     # X_train, train_masks, train_deltas, X_val, val_masks, val_deltas, _, _, _ = preprocess(params, train_subtrips, train_subtrips_downsampled, test_subtrips, test_subtrips_downsampled)
     # print('Train', X_train.shape)

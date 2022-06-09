@@ -5,67 +5,7 @@ from typing import Generator, List, Tuple
 import statistics as st
 
 
-def filter_trajectories(trajectories: np.ndarray, indices: List[int]) -> np.ndarray:
-    """Retains all trajectories at the specified indices and discards the rest.
 
-    Args:
-        trajectories (np.ndarray): A collection of trajectories.
-        indices (List[int]): A List of indices of the trajectories that need to be kept.
-
-    Returns:
-        np.ndarray: The filtered trajectories.
-    """
-    return np.array([trajectories[i] for i in indices])
- 
-
-def get_short_distance_trajectories_indices(trajectories: np.ndarray, traj_dist: int) -> np.ndarray:
-    """Removes all trajectories where the truck travels less than a threshold.
-
-    Args:
-        X (np.ndarray): The input trajectories.
-        traj_dist (int, optional): The minimum distance threshold in meters.
-
-    Returns:
-        np.ndarray: An array only containing trajectories where the truck travels more than the distance threshold.
-    """
-    indices = []
-    for idx, seq in enumerate(trajectories):
-        dist_covered = 0
-        for sample in range(1, len(seq)):
-            dist_covered += hs.haversine((seq[sample][0], seq[sample][1]), (seq[sample-1][0], seq[sample-1][1]), unit=Unit.METERS)
-        if dist_covered >= traj_dist:
-            indices.append(idx)
-    return indices
-
-
-def get_start_end_missing_trajectories_indices(trajectories: np.ndarray) -> np.ndarray:
-    """Discards all trajectories where the first and last sample is missing.
-
-    Args:
-        trajectories (np.ndarray): The input trajectories.
-
-    Returns:
-        np.ndarray: An array only containing trajectories where the first and last sample are observed.
-    """
-    indices = []
-    for idx, seq in enumerate(trajectories):
-       if seq[0][0] == 1:# and seq[-1][0] == 1:
-            indices.append(idx)
-    return indices
-
-
-def minmax_normalize(X: np.ndarray) -> Tuple[np.ndarray, float, float]:
-    """Performs Min-Max Normalization on the array.
-
-    Args:
-        X (np.ndarray): The input array.
-
-    Returns:
-        Tuple[np.ndarray, float, float]: The normalized array along with the min and max values required for denormalization.
-    """
-    min_val = X.min(axis=(0, 1), keepdims=True)
-    max_val = X.max(axis=(0, 1), keepdims=True)
-    return (X - min_val)/(max_val - min_val), min_val, max_val
 
 
 def minmax_denormalize(z: np.ndarray, min_val: float, max_val: float) -> np.ndarray:

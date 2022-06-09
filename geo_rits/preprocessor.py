@@ -1,8 +1,7 @@
-from dataclasses import dataclass, field
-from typing import Callable, Dict, List
+from dataclasses import dataclass
+from typing import Dict
 from data import Dataset
-from model_utils import create_mask_vector
-from preprocessing_utils import create_delta_vector, create_trajectories_and_masks
+from preprocessing_utils import create_delta_vector, create_trajectories_and_masks, reverse_trajectories, remove_short_distance_trajectories, remove_first_sample_missing_trajectories, minmax_normalize
 
 
 @dataclass
@@ -10,11 +9,17 @@ class Preprocessor:
     params: Dict
     training_jobs = [
         create_trajectories_and_masks,
-        create_delta_vector
+        create_delta_vector,
+        reverse_trajectories, 
+        remove_short_distance_trajectories,
+        remove_first_sample_missing_trajectories,
+        minmax_normalize
     ]
     
-    def preprocess(self, dataset: Dataset):
+    def preprocess(self, subtrips, masks):
+        dataset = Dataset()
+        dataset.trajectories, dataset.masks = subtrips, masks
         for i in self.training_jobs:
             dataset = i(dataset, self.params)
-        print(dataset.data.shape, dataset.masks.shape, dataset.deltas.shape)
+            print(dataset.trajectories.shape, dataset.masks.shape, dataset.deltas.shape)
         return dataset

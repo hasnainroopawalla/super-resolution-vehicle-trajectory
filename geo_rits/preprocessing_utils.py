@@ -1,8 +1,9 @@
-from typing import Dict
-import pandas as pd
-import tqdm
+from typing import Dict, List, Tuple
+from tqdm import tqdm
 import numpy as np
 from numpy.lib.stride_tricks import sliding_window_view
+import haversine as hs
+from haversine import Unit
 
 from data import Dataset
 
@@ -31,8 +32,9 @@ def create_trajectories_and_masks(dataset: Dataset, params: Dict) -> np.ndarray:
     Returns:
         np.ndarray: An array of all the generated trajectories from the subtrips.
     """
+    print('Creating trajectories and masks..')
     trajectories, masks = np.array([]), np.array([])
-    for subtrip, mask in tqdm.tqdm(zip(dataset.data, dataset.masks), total=len(dataset.data)):
+    for subtrip, mask in tqdm(zip(dataset.trajectories, dataset.masks), total=len(dataset.trajectories)):
         if len(subtrip) < params['traj_len']: 
             continue
         trajectories_subset = np.squeeze(sliding_window_view(subtrip, (params['traj_len'], 2))[::params['stride']], axis=1)
@@ -43,7 +45,7 @@ def create_trajectories_and_masks(dataset: Dataset, params: Dict) -> np.ndarray:
         else:
             trajectories = np.vstack((trajectories, trajectories_subset))
             masks = np.vstack((masks, masks_subset))
-    dataset.data, dataset.masks = trajectories, masks
+    dataset.trajectories, dataset.masks = trajectories, masks
     return dataset
 
 
@@ -57,8 +59,9 @@ def create_delta_vector(dataset: Dataset, params: Dict) -> np.ndarray:
     Returns:
         np.ndarray: The delta vector.
     """
+    print('Creating deltas..')
     deltas = []
-    for mask in tqdm.tqdm(dataset.masks):
+    for mask in tqdm(dataset.masks):
         delta = []
         for i in range(len(mask)):
             if i == 0:
@@ -76,3 +79,69 @@ def create_delta_vector(dataset: Dataset, params: Dict) -> np.ndarray:
     dataset.deltas = deltas
     return dataset
     
+    
+def reverse_trajectories(dataset: Dataset, params: Dict):
+    print('Reversing and appending trajectories..')
+    dataset.trajectories = np.concatenate((dataset.trajectories, dataset.trajectories[:, ::-1, :]))
+    dataset.masks = np.concatenate((dataset.masks, dataset.masks[:, ::-1, :]))
+    dataset.deltas = np.concatenate((dataset.deltas, dataset.deltas[:, ::-1, :]))
+    return dataset
+
+
+def remove_short_distance_trajectories(dataset: Dataset, params: Dict) -> np.ndarray:
+    """Removes all trajectories where the truck travels less than a threshold.
+
+    Args:
+        X (np.ndarray): The input trajectories.
+        traj_dist (int, optional): The minimum distance threshold in meters.
+
+    Returns:
+        np.ndarray: An array only containing trajectories where the truck travels more than the distance threshold.
+    """
+    print('Removing short distance trajectories (traj_dist)..')
+    indices = []
+    for idx, seq in tqdm(enumerate(dataset.trajectories), total=len(dataset.trajectories)):
+        dist_covered = 0
+        for sample in range(1, len(seq)):
+            dist_covered += hs.haversine((seq[sample][0], seq[sample][1]), (seq[sample-1][0], seq[sample-1][1]), unit=Unit.METERS)
+        if dist_covered >= params['traj_dist']:
+            indices.append(idx)
+    dataset.trajectories = np.array([dataset.trajectories[i] for i in indices])
+    dataset.masks = np.array([dataset.masks[i] for i in indices])
+    dataset.deltas = np.array([dataset.deltas[i] for i in indices])
+    return dataset
+
+
+def remove_first_sample_missing_trajectories(dataset: Dataset, params: Dict) -> np.ndarray:
+    """Discards all trajectories where the first and last sample is missing.
+
+    Args:
+        trajectories (np.ndarray): The input trajectories.
+
+    Returns:
+        np.ndarray: An array only containing trajectories where the first and last sample are observed.
+    """
+    print('Removing first sample missing trajectories..')
+    indices = []
+    for idx, seq in tqdm(enumerate(dataset.masks), total=len(dataset.masks)):
+       if seq[0][0] == 1 and seq[-1][0] == 1:
+            indices.append(idx)
+    dataset.trajectories = np.array([dataset.trajectories[i] for i in indices])
+    dataset.masks = np.array([dataset.masks[i] for i in indices])
+    dataset.deltas = np.array([dataset.deltas[i] for i in indices])
+    return dataset
+
+
+def minmax_normalize(dataset: Dataset, params: Dict) -> Tuple[np.ndarray, float, float]:
+    """Performs Min-Max Normalization on the array.
+
+    Args:
+        X (np.ndarray): The input array.
+
+    Returns:
+        Tuple[np.ndarray, float, float]: The normalized array along with the min and max values required for denormalization.
+    """
+    min_val = dataset.trajectories.min(axis=(0, 1), keepdims=True)
+    max_val = dataset.trajectories.max(axis=(0, 1), keepdims=True)
+    dataset.trajectories = (dataset.trajectories - min_val)/(max_val - min_val)
+    return dataset

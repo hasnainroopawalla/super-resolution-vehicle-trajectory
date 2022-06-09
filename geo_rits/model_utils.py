@@ -1,15 +1,11 @@
 from typing import Any, Dict, Tuple
 import numpy as np
-import tqdm
-import pandas as pd
-from numpy.lib.stride_tricks import sliding_window_view
 from sklearn.model_selection import train_test_split
 import pickle
 import tensorflow as tf
-from data import Dataset
 
 from rits import RITS
-from helpers import get_short_distance_trajectories_indices, get_start_end_missing_trajectories_indices, filter_trajectories, minmax_normalize
+# from helpers import get_short_distance_trajectories_indices, get_start_end_missing_trajectories_indices, filter_trajectories, minmax_normalize
 
 
 # def create_trajectories(subtrips, params: Dict) -> np.ndarray:
@@ -70,7 +66,7 @@ def load_data(data_path: str) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.nd
         train_subtrips_stockholm_downsampled = pickle.load(filehandle)
     for i in train_subtrips_stockholm_downsampled:
         masks.append(create_mask_vector(i[['latitude', 'longitude']].to_numpy().astype('float32')))
-        
+    print('Done')
     return subtrips, masks
 
 
@@ -114,10 +110,6 @@ def initialize_model(params: Dict[str, Any], X_train: np.ndarray, train_masks: n
 
     print(model.summary())
     return model, optimizer
-
-
-def reverse_trajectories(X: np.ndarray):
-    return X[:, ::-1, :]
 
 
 def save_model(model_dir, model, history):
