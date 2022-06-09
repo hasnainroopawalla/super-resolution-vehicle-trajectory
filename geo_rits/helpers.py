@@ -5,9 +5,6 @@ from typing import Generator, List, Tuple
 import statistics as st
 
 
-
-
-
 def minmax_denormalize(z: np.ndarray, min_val: float, max_val: float) -> np.ndarray:
     """Performs Min-Max denormalization on the normalized array.
 
@@ -33,7 +30,7 @@ def z_score_normalize(X: np.ndarray):
     """
     mean = X.mean(axis=(0, 1), keepdims=True)
     std = X.std(axis=(0, 1), keepdims=True)
-    return (X - mean)/std, mean, std
+    return (X - mean) / std, mean, std
 
 
 def z_score_denormalize(z: np.ndarray, mean: float, std: float):
@@ -51,7 +48,11 @@ def z_score_denormalize(z: np.ndarray, mean: float, std: float):
 
 
 def generate_minibatches(
-    X: np.ndarray, masks: np.ndarray, deltas: np.ndarray, batch_size: int, shuffle: bool = False
+    X: np.ndarray,
+    masks: np.ndarray,
+    deltas: np.ndarray,
+    batch_size: int,
+    shuffle: bool = False,
 ) -> Generator[Tuple[np.ndarray, np.ndarray, np.ndarray], None, None]:
     """Generate batches of the data based on the batch_size.
     This method also handles cases where the number of samples is not divisible by the batch size.
@@ -81,7 +82,9 @@ def generate_minibatches(
         yield X[batch], masks[batch], deltas[batch]
 
 
-def haversine_distance(latitude1: float, longitude1: float, latitude2: float, longitude2: float) -> float:
+def haversine_distance(
+    latitude1: float, longitude1: float, latitude2: float, longitude2: float
+) -> float:
     """Computes the haversine distance between two coordinates.
 
     Args:
@@ -93,10 +96,16 @@ def haversine_distance(latitude1: float, longitude1: float, latitude2: float, lo
     Returns:
         float: The haversine distance in meters.
     """
-    return hs.haversine((latitude1, longitude1), (latitude2, longitude2), unit=Unit.METERS)
+    return hs.haversine(
+        (latitude1, longitude1), (latitude2, longitude2), unit=Unit.METERS
+    )
 
 
-def average_distance_error(predicted_trajectories: np.ndarray, actual_trajectories: np.ndarray, masks: np.ndarray) -> Tuple[float, float]:
+def average_distance_error(
+    predicted_trajectories: np.ndarray,
+    actual_trajectories: np.ndarray,
+    masks: np.ndarray,
+) -> Tuple[float, float]:
     """Computes the average distance error between the estimated trajectory and the actual trajectory.
 
     Args:
@@ -108,10 +117,14 @@ def average_distance_error(predicted_trajectories: np.ndarray, actual_trajectori
         Tuple[float, float, float]: The mean, standard deviation and median of the error values.
     """
     entire_trajectory_error, missing_values_error = [], []
-    for predicted, actual, mask in zip(predicted_trajectories, actual_trajectories, masks):
+    for predicted, actual, mask in zip(
+        predicted_trajectories, actual_trajectories, masks
+    ):
         for predicted_value, actual_value, mask_value in zip(predicted, actual, mask):
-            error = haversine_distance(predicted_value[0], predicted_value[1], actual_value[0], actual_value[1])
-            if mask_value[0] == 0: 
+            error = haversine_distance(
+                predicted_value[0], predicted_value[1], actual_value[0], actual_value[1]
+            )
+            if mask_value[0] == 0:
                 missing_values_error.append(error)
             entire_trajectory_error.append(error)
     return st.mean(entire_trajectory_error), st.mean(missing_values_error)

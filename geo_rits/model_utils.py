@@ -5,6 +5,7 @@ import pickle
 import tensorflow as tf
 
 from rits import RITS
+
 # from helpers import get_short_distance_trajectories_indices, get_start_end_missing_trajectories_indices, filter_trajectories, minmax_normalize
 
 
@@ -14,14 +15,14 @@ from rits import RITS
 #     Args:
 #         subtrips (pd.DataFrame): A collection of pre-processed subtrips.
 #         trajectory_len (int): The number of samples in each trajectory (sliding window size).
-#         stride (int): The number of steps the sliding window moves by each iteration. 
+#         stride (int): The number of steps the sliding window moves by each iteration.
 
 #     Returns:
 #         np.ndarray: An array of all the generated trajectories from the subtrips.
 #     """
 #     all_trajectories = np.array([])
 #     for subtrip in tqdm.tqdm(subtrips):
-#         if len(subtrip) < params['traj_len']: 
+#         if len(subtrip) < params['traj_len']:
 #             continue
 #         subtrip_subset = subtrip[['latitude', 'longitude']].to_numpy().astype('float32')
 #         trajectories = np.squeeze(sliding_window_view(subtrip_subset, (params['traj_len'], 2))[::params['stride']], axis=1)
@@ -33,7 +34,7 @@ from rits import RITS
 
 
 def create_mask_vector(downsampled_trajectories: np.ndarray) -> np.ndarray:
-    """Creates the masks vector 'm' given the downsampled trajectories. 
+    """Creates the masks vector 'm' given the downsampled trajectories.
     The vector contains 1 for observed values and 0 for missing values.
 
     Args:
@@ -42,7 +43,7 @@ def create_mask_vector(downsampled_trajectories: np.ndarray) -> np.ndarray:
     Returns:
         np.ndarray: The mask vector 'm'.
     """
-    return (~np.isnan(downsampled_trajectories) * 1).astype('float32') 
+    return (~np.isnan(downsampled_trajectories) * 1).astype("float32")
 
 
 def load_data(data_path: str) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
@@ -54,19 +55,23 @@ def load_data(data_path: str) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.nd
     Returns:
         Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]: Training Data, Downsampled Training Data, Test Data, Downsampled Test Data.
     """
-    print('Loading Data..')
+    print("Loading Data..")
     subtrips, masks = [], []
-    with open(f'{data_path}/train_subtrips_clean.data', 'rb') as filehandle:
+    with open(f"{data_path}/train_subtrips_clean.data", "rb") as filehandle:
         train_subtrips_stockholm = pickle.load(filehandle)
-    
-    for i in train_subtrips_stockholm:
-        subtrips.append(i[['latitude', 'longitude']].to_numpy().astype('float32'))
 
-    with open(f'{data_path}/train_subtrips_downsampled_clean.data', 'rb') as filehandle:
+    for i in train_subtrips_stockholm:
+        subtrips.append(i[["latitude", "longitude"]].to_numpy().astype("float32"))
+
+    with open(f"{data_path}/train_subtrips_downsampled_clean.data", "rb") as filehandle:
         train_subtrips_stockholm_downsampled = pickle.load(filehandle)
     for i in train_subtrips_stockholm_downsampled:
-        masks.append(create_mask_vector(i[['latitude', 'longitude']].to_numpy().astype('float32')))
-    print('Done')
+        masks.append(
+            create_mask_vector(
+                i[["latitude", "longitude"]].to_numpy().astype("float32")
+            )
+        )
+    print("Done")
     return subtrips, masks
 
 
@@ -79,13 +84,18 @@ def load_normalizing_params(model_path: str) -> Dict[str, float]:
     Returns:
         Dict[str, float]: The normalizing parameters required for denormalization.
     """
-    with open(f'{model_path}/normalizing_params.data', 'rb') as filehandle:
+    with open(f"{model_path}/normalizing_params.data", "rb") as filehandle:
         normalizing_params = pickle.load(filehandle)
 
     return normalizing_params
 
 
-def initialize_model(params: Dict[str, Any], X_train: np.ndarray, train_masks: np.ndarray, train_deltas: np.ndarray) -> Tuple[RITS, Any]:
+def initialize_model(
+    params: Dict[str, Any],
+    X_train: np.ndarray,
+    train_masks: np.ndarray,
+    train_deltas: np.ndarray,
+) -> Tuple[RITS, Any]:
     """Initializes the model with the specified parameters.
 
     Args:
@@ -98,28 +108,43 @@ def initialize_model(params: Dict[str, Any], X_train: np.ndarray, train_masks: n
         Tuple[Union[RITS, BRITS]]: The initialized unidirectional or bidirectional model.
         Optimizer: The optimizer initialized for training.
     """
-    if params['unidirectional']:
-        model = RITS(internal_dim=2, hid_dim=params['hid_dim'])
-  
-    optimizer = tf.keras.optimizers.Adam(learning_rate=params['learning_rate'])
+    if params["unidirectional"]:
+        model = RITS(internal_dim=2, hid_dim=params["hid_dim"])
+
+    optimizer = tf.keras.optimizers.Adam(learning_rate=params["learning_rate"])
     model(X_train[0:1], train_masks[0:1], train_deltas[0:1])
 
-    if params['load_weights']:
+    if params["load_weights"]:
         model.load_weights(f'models/{params["model_name"]}/model')
-        print('Existing Weights Loaded.')
+        print("Existing Weights Loaded.")
 
     print(model.summary())
     return model, optimizer
 
 
 def save_model(model_dir, model, history):
-    model.save_weights(f'{model_dir}/model')
+    model.save_weights(f"{model_dir}/model")
     pickle.dump(history, open(f"{model_dir}/history.data", "wb"))
-    print('-- Model Saved --')
+    print("-- Model Saved --")
 
 
-def preprocess(params: Dict[str, Any], train_subtrips: np.ndarray, train_subtrips_downsampled: np.ndarray, test_subtrips: np.ndarray, test_subtrips_downsampled: np.ndarray
-    ) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+def preprocess(
+    params: Dict[str, Any],
+    train_subtrips: np.ndarray,
+    train_subtrips_downsampled: np.ndarray,
+    test_subtrips: np.ndarray,
+    test_subtrips_downsampled: np.ndarray,
+) -> Tuple[
+    np.ndarray,
+    np.ndarray,
+    np.ndarray,
+    np.ndarray,
+    np.ndarray,
+    np.ndarray,
+    np.ndarray,
+    np.ndarray,
+    np.ndarray,
+]:
     """_summary_
 
     Args:
@@ -132,22 +157,28 @@ def preprocess(params: Dict[str, Any], train_subtrips: np.ndarray, train_subtrip
     Returns:
         Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray]: The pre-processed trajectories.
     """
-    print('Pre-processing..')
+    print("Pre-processing..")
     # Create train trajectories of defined length
-    X_train = create_trajectories(train_subtrips, params['traj_len'], params['stride'])
-    X_train_downsampled = create_trajectories(train_subtrips_downsampled, params['traj_len'], params['stride'])
+    X_train = create_trajectories(train_subtrips, params["traj_len"], params["stride"])
+    X_train_downsampled = create_trajectories(
+        train_subtrips_downsampled, params["traj_len"], params["stride"]
+    )
 
     # Reverse the trajectories and append them to the existing dataset
     X_train = np.concatenate((X_train, reverse_trajectories(X_train)))
-    X_train_downsampled = np.concatenate((X_train_downsampled, reverse_trajectories(X_train_downsampled)))
+    X_train_downsampled = np.concatenate(
+        (X_train_downsampled, reverse_trajectories(X_train_downsampled))
+    )
 
     # Remove all trajectories where the truck barely travels
-    indices = get_short_distance_trajectories_indices(X_train, params['traj_dist'])
+    indices = get_short_distance_trajectories_indices(X_train, params["traj_dist"])
     X_train = filter_trajectories(X_train, indices)
     X_train_downsampled = filter_trajectories(X_train_downsampled, indices)
 
     # Create a validation set
-    X_train, X_val, X_train_downsampled, X_val_downsampled = train_test_split(X_train, X_train_downsampled, test_size=0.05, shuffle=True)
+    X_train, X_val, X_train_downsampled, X_val_downsampled = train_test_split(
+        X_train, X_train_downsampled, test_size=0.05, shuffle=True
+    )
 
     # Create train mask and delta vectors
     train_masks = create_mask_vector(X_train_downsampled)
@@ -158,17 +189,19 @@ def preprocess(params: Dict[str, Any], train_subtrips: np.ndarray, train_subtrip
     val_deltas = create_delta_vector(val_masks)
 
     # Create test trajectories of defined length
-    X_test = create_trajectories(test_subtrips, params['traj_len'], params['stride'])
-    X_test_downsampled = create_trajectories(test_subtrips_downsampled, params['traj_len'], params['stride'])
+    X_test = create_trajectories(test_subtrips, params["traj_len"], params["stride"])
+    X_test_downsampled = create_trajectories(
+        test_subtrips_downsampled, params["traj_len"], params["stride"]
+    )
 
-    indices = get_short_distance_trajectories_indices(X_test, params['traj_dist'])
+    indices = get_short_distance_trajectories_indices(X_test, params["traj_dist"])
     X_test = filter_trajectories(X_test, indices)
     X_test_downsampled = filter_trajectories(X_test_downsampled, indices)
 
     # Create mask and delta vectors
     test_masks = create_mask_vector(X_test_downsampled)
     test_deltas = create_delta_vector(test_masks)
-    
+
     # Filter all trajectories that start and end with a missing value
     train_indices = get_start_end_missing_trajectories_indices(train_masks)
     X_train = filter_trajectories(X_train, train_indices)
@@ -185,13 +218,32 @@ def preprocess(params: Dict[str, Any], train_subtrips: np.ndarray, train_subtrip
     test_masks = filter_trajectories(test_masks, test_indices)
     test_deltas = filter_trajectories(test_deltas, test_indices)
 
-    if params['normalize']:
+    if params["normalize"]:
         normalizing_params = {}
-        X_train, normalizing_params['X_train_min_val'], normalizing_params['X_train_max_val'] = minmax_normalize(X_train)
-        X_val, normalizing_params['X_val_min_val'], normalizing_params['X_val_max_val'] = minmax_normalize(X_val)
-        X_test, normalizing_params['X_test_min_val'], normalizing_params['X_test_max_val'] = minmax_normalize(X_test)
-        if params['training']: 
+        X_train, normalizing_params["X_train_min_val"], normalizing_params[
+            "X_train_max_val"
+        ] = minmax_normalize(X_train)
+        X_val, normalizing_params["X_val_min_val"], normalizing_params[
+            "X_val_max_val"
+        ] = minmax_normalize(X_val)
+        X_test, normalizing_params["X_test_min_val"], normalizing_params[
+            "X_test_max_val"
+        ] = minmax_normalize(X_test)
+        if params["training"]:
             # Save normalizing params if the model is in training mode
-            pickle.dump(normalizing_params, open(f"models/{params['model_name']}/normalizing_params.data", "wb"))
-    
-    return X_train, train_masks, train_deltas, X_val, val_masks, val_deltas, X_test, test_masks, test_deltas
+            pickle.dump(
+                normalizing_params,
+                open(f"models/{params['model_name']}/normalizing_params.data", "wb"),
+            )
+
+    return (
+        X_train,
+        train_masks,
+        train_deltas,
+        X_val,
+        val_masks,
+        val_deltas,
+        X_test,
+        test_masks,
+        test_deltas,
+    )

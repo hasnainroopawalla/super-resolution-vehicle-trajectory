@@ -13,7 +13,9 @@ from rits import RITS
 from history import History
 
 
-def step(model: RITS, optimizer: Any, X: np.ndarray, masks: np.ndarray, deltas: np.ndarray) -> np.ndarray:
+def step(
+    model: RITS, optimizer: Any, X: np.ndarray, masks: np.ndarray, deltas: np.ndarray
+) -> np.ndarray:
     """A single iteration during training.
 
     Args:
@@ -46,17 +48,17 @@ def train(params: Dict[str, Any]) -> None:
     Args:
         params (Dict[str, Any]): A collection of model parameters.
     """
-    subtrips, masks = load_data('data')
-    
+    subtrips, masks = load_data("data")
+
     P = Preprocessor(params)
     train = P.preprocess(subtrips, masks)
-    
+
     # X_train, train_masks, train_deltas, X_val, val_masks, val_deltas, _, _, _ = preprocess(params, train_subtrips, train_subtrips_downsampled, test_subtrips, test_subtrips_downsampled)
     # print('Train', X_train.shape)
     # print('Val', X_val.shape)
-    
+
     # model, optimizer = initialize_model(params, X_train, train_masks, train_deltas)
-    
+
     # model_dir = f'models/{params["model_name"]}'
     # history = History(model_dir)
 
@@ -77,24 +79,40 @@ def train(params: Dict[str, Any]) -> None:
 
     #     print('-'*10)
 
+
 def get_params():
     params = {
-        'traj_len': 30,
-        'stride': 2,
-        'traj_dist': 1000, # meters
-        'epochs': 500,
-        'learning_rate': 1e-4,
-        'batch_size': 128,
-        'hid_dim': 100,
-        'load_weights': True,
-        'checkpoint_freq': 10,
-        'normalize': True,
-        'training': True
+        "traj_len": 30,
+        "stride": 2,
+        "traj_dist": 1000,  # meters
+        "epochs": 500,
+        "learning_rate": 1e-4,
+        "batch_size": 128,
+        "hid_dim": 100,
+        "load_weights": True,
+        "checkpoint_freq": 10,
+        "normalize": True,
+        "training": True,
     }
-    params['model_name'] = '_'.join(str(val) for key, val in list(params.items()) if key in ['traj_len', 'stride', 'traj_dist', 'learning_rate', 'batch_size', 'unidirectional', 'hid_dim', 'normalize'])
+    params["model_name"] = "_".join(
+        str(val)
+        for key, val in list(params.items())
+        if key
+        in [
+            "traj_len",
+            "stride",
+            "traj_dist",
+            "learning_rate",
+            "batch_size",
+            "unidirectional",
+            "hid_dim",
+            "normalize",
+        ]
+    )
     model_dir = f"models/{params['model_name']}"
     Path(model_dir).mkdir(parents=True, exist_ok=True)
     return params
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     train(get_params())
