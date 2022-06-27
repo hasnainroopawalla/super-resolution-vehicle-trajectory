@@ -1,4 +1,3 @@
-from typing import Tuple
 import tensorflow as tf
 import numpy as np
 from data import Dataset
@@ -6,8 +5,12 @@ from config import Config
 from preprocessor import Preprocessor
 import keras
 
-from model_utils import load_data, initialize_model
-from helpers import generate_minibatches, average_distance_error
+from helpers import (
+    generate_minibatches,
+    load_data,
+    initialize_model,
+    compute_model_error,
+)
 from rits import RITS
 
 
@@ -37,27 +40,6 @@ def step(
     return custom_loss
 
 
-def compute_errors(model: RITS, dataset: Dataset) -> Tuple[np.ndarray, np.ndarray]:
-    """Computes the average model error on the specified dataset.
-
-    Args:
-        model (RITS): The trained RITS model.
-        dataset (Dataset): The dataset used for evaluating the model.
-
-    Returns:
-        np.ndarray: The model loss on the dataset.
-        np.ndarray: The masked error i.e., only on the missing/downsampled values.
-    """
-    predicted_imputations, loss = model(
-        dataset.trajectories, dataset.masks, dataset.deltas
-    )
-    predicted_imputations = predicted_imputations.numpy()
-    masked_error = average_distance_error(
-        predicted_imputations, dataset.trajectories, dataset.masks
-    )
-    return np.mean(loss), masked_error
-
-
 def train(config: Config) -> None:
     """Trains the model with the specified parameters.
 
@@ -75,7 +57,7 @@ def train(config: Config) -> None:
         ):
             step(model, optimizer, training_set_minibatch)
 
-        train_loss, train_error = compute_errors(model, training_set)
+        train_loss, train_error = compute_model_error(model, training_set)
 
         print(
             f"Epoch {i}/{config.epochs}, Train Loss: {train_loss}, Train Error: {train_error}"

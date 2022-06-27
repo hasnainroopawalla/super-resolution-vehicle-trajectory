@@ -1,4 +1,3 @@
-from typing import Dict
 import pickle
 from tqdm import tqdm
 import numpy as np
@@ -8,19 +7,6 @@ from haversine import Unit
 
 from data import Dataset
 from config import Config
-
-# def downsample_subtrip(subtrip: pd.DataFrame):
-#     # Adaptive Downsampling on a single subtrip.
-#     subtrip_downsampled = subtrip.reset_index(drop=True)
-#     i = 1
-#     while i < subtrip_downsampled.shape[0] - 1:
-#         if subtrip_downsampled.loc[i, 'triggertype'] == 3:
-#             subtrip_downsampled.loc[i, 'latitude'] = None
-#             subtrip_downsampled.loc[i, 'longitude'] = None
-#             i = i + 2
-#         else:
-#             i = i + 1
-#     return subtrip_downsampled
 
 
 def create_trajectories(dataset: Dataset, config: Config) -> Dataset:
@@ -182,3 +168,17 @@ def minmax_normalize(dataset: Dataset, config: Config) -> Dataset:
             open(f"models/{config.model_name}/normalizing_params.data", "wb"),
         )
     return dataset
+
+
+def adaptive_downsample_subtrip(subtrip):
+    # Adaptive Downsampling on a single subtrip.
+    subtrip_downsampled = subtrip.reset_index(drop=True)
+    i = 1
+    while i < subtrip_downsampled.shape[0] - 1:
+        if subtrip_downsampled.loc[i, "triggertype"] == 3:
+            subtrip_downsampled.loc[i, "latitude"] = None
+            subtrip_downsampled.loc[i, "longitude"] = None
+            i = i + 2
+        else:
+            i = i + 1
+    return subtrip_downsampled
