@@ -1,36 +1,12 @@
-from typing import Any, Dict, Tuple
+from typing import Any, Dict, List, Tuple
 import numpy as np
 from sklearn.model_selection import train_test_split
 import pickle
 import tensorflow as tf
+from data import Dataset
+import keras
 
 from rits import RITS
-
-# from helpers import get_short_distance_trajectories_indices, get_start_end_missing_trajectories_indices, filter_trajectories, minmax_normalize
-
-
-# def create_trajectories(subtrips, params: Dict) -> np.ndarray:
-#     """Creates shorter sequences/trajectories of the subtrips using the sliding window approach.
-
-#     Args:
-#         subtrips (pd.DataFrame): A collection of pre-processed subtrips.
-#         trajectory_len (int): The number of samples in each trajectory (sliding window size).
-#         stride (int): The number of steps the sliding window moves by each iteration.
-
-#     Returns:
-#         np.ndarray: An array of all the generated trajectories from the subtrips.
-#     """
-#     all_trajectories = np.array([])
-#     for subtrip in tqdm.tqdm(subtrips):
-#         if len(subtrip) < params['traj_len']:
-#             continue
-#         subtrip_subset = subtrip[['latitude', 'longitude']].to_numpy().astype('float32')
-#         trajectories = np.squeeze(sliding_window_view(subtrip_subset, (params['traj_len'], 2))[::params['stride']], axis=1)
-#         if len(all_trajectories) == 0:
-#             all_trajectories = trajectories
-#         else:
-#             all_trajectories = np.vstack((all_trajectories, trajectories))
-#     return all_trajectories
 
 
 def create_mask_vector(downsampled_trajectories: np.ndarray) -> np.ndarray:
@@ -46,8 +22,8 @@ def create_mask_vector(downsampled_trajectories: np.ndarray) -> np.ndarray:
     return (~np.isnan(downsampled_trajectories) * 1).astype("float32")
 
 
-def load_data(data_path: str) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
-    """Loads the data (subtrips) from the specified file path.
+def load_data(data_path: str) -> Tuple[List[np.ndarray], List[np.ndarray]]:
+    """Loads the subtrips and masks from the specified file path.
 
     Args:
         data_path (str): The path to the data folder.
@@ -57,6 +33,7 @@ def load_data(data_path: str) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.nd
     """
     print("Loading Data..")
     subtrips, masks = [], []
+    
     with open(f"{data_path}/train_subtrips_clean.data", "rb") as filehandle:
         train_subtrips_stockholm = pickle.load(filehandle)
 
@@ -65,6 +42,8 @@ def load_data(data_path: str) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.nd
 
     with open(f"{data_path}/train_subtrips_downsampled_clean.data", "rb") as filehandle:
         train_subtrips_stockholm_downsampled = pickle.load(filehandle)
+        
+    # Convert the downsampled subtrips to a mask vector
     for i in train_subtrips_stockholm_downsampled:
         masks.append(
             create_mask_vector(
@@ -86,38 +65,33 @@ def load_normalizing_params(model_path: str) -> Dict[str, float]:
     """
     with open(f"{model_path}/normalizing_params.data", "rb") as filehandle:
         normalizing_params = pickle.load(filehandle)
-
     return normalizing_params
 
 
 def initialize_model(
     params: Dict[str, Any],
-    X_train: np.ndarray,
-    train_masks: np.ndarray,
-    train_deltas: np.ndarray,
-) -> Tuple[RITS, Any]:
+    dataset: Dataset
+) -> Tuple[RITS, keras.optimizers.optimizer_v2.optimizer_v2.OptimizerV2]:
     """Initializes the model with the specified parameters.
 
     Args:
         params (Dict[str, Any]): A collection of model parameters.
-        X_train (np.ndarray): Training data.
-        train_masks (np.ndarray): Training masks.
-        train_deltas (np.ndarray): Training deltas.
+        dataset (Dataset): An training dataset containing trajectories, the mask and the delta vectors.
 
     Returns:
-        Tuple[Union[RITS, BRITS]]: The initialized unidirectional or bidirectional model.
+        RITS: The initialized unidirectional RITS model.
         Optimizer: The optimizer initialized for training.
     """
     if params["unidirectional"]:
         model = RITS(internal_dim=2, hid_dim=params["hid_dim"])
 
     optimizer = tf.keras.optimizers.Adam(learning_rate=params["learning_rate"])
-    model(X_train[0:1], train_masks[0:1], train_deltas[0:1])
+    model(dataset.trajectories[0:1], dataset.masks[0:1], dataset.deltas[0:1])
 
     if params["load_weights"]:
         model.load_weights(f'models/{params["model_name"]}/model')
         print("Existing Weights Loaded.")
-
+        
     print(model.summary())
     return model, optimizer
 

@@ -2,12 +2,10 @@ from typing import Dict, Any
 import tensorflow as tf
 import numpy as np
 from pathlib import Path
-from data import Dataset
-from model_utils import create_mask_vector
 from preprocessor import Preprocessor
 from model_utils import save_model
 
-from model_utils import preprocess, load_data, initialize_model
+from model_utils import load_data, initialize_model
 from helpers import generate_minibatches, average_distance_error
 from rits import RITS
 from history import History
@@ -51,64 +49,46 @@ def train(params: Dict[str, Any]) -> None:
     subtrips, masks = load_data("data")
 
     P = Preprocessor(params)
-    train = P.preprocess(subtrips, masks)
+    train = P.preprocess(subtrips, masks, training=True)
 
-    # X_train, train_masks, train_deltas, X_val, val_masks, val_deltas, _, _, _ = preprocess(params, train_subtrips, train_subtrips_downsampled, test_subtrips, test_subtrips_downsampled)
-    # print('Train', X_train.shape)
-    # print('Val', X_val.shape)
+    model, optimizer = initialize_model(params, train)
 
-    # model, optimizer = initialize_model(params, X_train, train_masks, train_deltas)
+    model_dir = f'models/{params["model_name"]}'
+    history = History(model_dir)
 
-    # model_dir = f'models/{params["model_name"]}'
-    # history = History(model_dir)
+    for i in range(1, params['epochs'] + 1):
+        for X_mb, masks_mb, deltas_mb in generate_minibatches(train.trajectories, train.masks, train.deltas, params['batch_size'], shuffle=True):
+            step(model, optimizer, X_mb, masks_mb, deltas_mb)
 
-    # for i in range(1, params['epochs'] + 1):
-    #     for X_mb, masks_mb, deltas_mb in generate_minibatches(X_train, train_masks, train_deltas, params['batch_size'], shuffle=True):
-    #         step(model, optimizer, X_mb, masks_mb, deltas_mb)
+        train_loss, train_entire_trajectory_error, train_masked_trajectory_error = compute_errors(model, train.trajectories, train.masks, train.deltas)
+        history.update(train_loss, train_entire_trajectory_error, train_masked_trajectory_error)
+        
+        print(f'Epoch {i}/{params["epochs"]}, Train Loss: {train_loss}')
+        print(f'Complete Error => Train: {train_entire_trajectory_error}')
+        print(f'Masked Error => Train: {train_masked_trajectory_error}')
 
-    #     train_loss, train_entire_trajectory_error, train_masked_trajectory_error = compute_errors(model, X_train, train_masks, train_deltas)
-    #     val_loss, val_entire_trajectory_error, val_masked_trajectory_error = compute_errors(model, X_val, val_masks, val_deltas)
-    #     history.update(train_loss, train_entire_trajectory_error, train_masked_trajectory_error, val_loss, val_entire_trajectory_error, val_masked_trajectory_error)
+        if i % params['checkpoint_freq'] == 0:
+            save_model(model_dir, model, history)
 
-    #     print(f'Epoch {i}/{params["epochs"]}, Train Loss: {train_loss}, Val Loss: {val_loss}')
-    #     print(f'Complete Error => Train: {train_entire_trajectory_error}, Val Error: {val_entire_trajectory_error}')
-    #     print(f'Masked Error => Train: {train_masked_trajectory_error}, Val Error: {val_masked_trajectory_error}')
-
-    #     if i % params['checkpoint_freq'] == 0:
-    #         save_model(model_dir, model, history)
-
-    #     print('-'*10)
+        print('-'*10)
 
 
 def get_params():
     params = {
+        "model_name": "model",
         "traj_len": 30,
-        "stride": 2,
-        "traj_dist": 1000,  # meters
+        "stride": 4,
+        "traj_dist": 1000, # meters
         "epochs": 500,
         "learning_rate": 1e-4,
         "batch_size": 128,
         "hid_dim": 100,
-        "load_weights": True,
+        "load_weights": False,
+        "unidirectional": True,
         "checkpoint_freq": 10,
         "normalize": True,
         "training": True,
     }
-    params["model_name"] = "_".join(
-        str(val)
-        for key, val in list(params.items())
-        if key
-        in [
-            "traj_len",
-            "stride",
-            "traj_dist",
-            "learning_rate",
-            "batch_size",
-            "unidirectional",
-            "hid_dim",
-            "normalize",
-        ]
-    )
     model_dir = f"models/{params['model_name']}"
     Path(model_dir).mkdir(parents=True, exist_ok=True)
     return params

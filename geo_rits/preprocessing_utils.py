@@ -1,4 +1,4 @@
-from typing import Dict, List, Tuple
+from typing import Dict, Tuple
 from tqdm import tqdm
 import numpy as np
 from numpy.lib.stride_tricks import sliding_window_view
@@ -21,7 +21,7 @@ from data import Dataset
 #     return subtrip_downsampled
 
 
-def create_trajectories_and_masks(dataset: Dataset, params: Dict) -> np.ndarray:
+def create_trajectories(dataset: Dataset, params: Dict) -> np.ndarray:
     """Creates shorter sequences/trajectories of the subtrips using the sliding window approach.
 
     Args:
@@ -142,7 +142,7 @@ def remove_first_sample_missing_trajectories(
     print("Removing first sample missing trajectories..")
     indices = []
     for idx, seq in tqdm(enumerate(dataset.masks), total=len(dataset.masks)):
-        if seq[0][0] == 1 and seq[-1][0] == 1:
+        if seq[0][0] == 1:# and seq[-1][0] == 1:
             indices.append(idx)
     dataset.trajectories = np.array([dataset.trajectories[i] for i in indices])
     dataset.masks = np.array([dataset.masks[i] for i in indices])
