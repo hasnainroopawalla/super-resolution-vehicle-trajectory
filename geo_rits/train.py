@@ -47,6 +47,7 @@ def train(config: Config) -> None:
         config (Config): A collection of model parameters.
     """
     subtrips, masks = load_data("data")
+
     P = Preprocessor(config)
     training_set = P.preprocess(subtrips, masks, training=True)
     model, optimizer = initialize_model(config, training_set)

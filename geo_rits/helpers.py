@@ -117,24 +117,10 @@ def load_data(data_path: str) -> Tuple[List[np.ndarray], List[np.ndarray]]:
         List[np.ndarray]: The mask vector for the subtrips obtained after adaptive downsampling.
     """
     print("Loading Data..")
-    subtrips, masks = [], []
-
-    with open(f"{data_path}/train_subtrips_clean.data", "rb") as filehandle:
-        train_subtrips_stockholm = pickle.load(filehandle)
-
-    for i in train_subtrips_stockholm:
-        subtrips.append(i[["latitude", "longitude"]].to_numpy().astype("float32"))
-
-    with open(f"{data_path}/train_subtrips_downsampled_clean.data", "rb") as filehandle:
-        train_subtrips_stockholm_downsampled = pickle.load(filehandle)
-
-    # Convert the downsampled subtrips to a mask vector
-    for i in train_subtrips_stockholm_downsampled:
-        masks.append(
-            create_mask_vector(
-                i[["latitude", "longitude"]].to_numpy().astype("float32")
-            )
-        )
+    with open(f"{data_path}/subtrips.data", "rb") as filehandle:
+        subtrips = pickle.load(filehandle)
+    with open(f"{data_path}/masks.data", "rb") as filehandle:
+        masks = pickle.load(filehandle)
     print("Done")
     return subtrips, masks
 
