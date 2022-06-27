@@ -1,7 +1,8 @@
-from typing import Any, Callable, Dict, List
+from typing import Callable, List
 import numpy as np
 
 from data import Dataset
+from config import Config
 from preprocessing_utils import (
     create_delta_vector,
     create_trajectories,
@@ -13,8 +14,8 @@ from preprocessing_utils import (
 
 
 class Preprocessor:
-    def __init__(self, params: Dict[str, Any]) -> None:
-        self.params = params
+    def __init__(self, config: Config) -> None:
+        self.config = config
         self.training_jobs: List[Callable] = [
             create_trajectories,
             create_delta_vector,
@@ -25,7 +26,9 @@ class Preprocessor:
         ]
         self.test_jobs: List[Callable] = []
 
-    def preprocess(self, subtrips: List[np.ndarray], masks: List[np.ndarray], training: bool) -> Dataset:
+    def preprocess(
+        self, subtrips: List[np.ndarray], masks: List[np.ndarray], training: bool
+    ) -> Dataset:
         """A method to preprocess the subtrips using the specified preprocessing pipeline.
 
         Args:
@@ -40,6 +43,6 @@ class Preprocessor:
         dataset.trajectories, dataset.masks = subtrips, masks
         jobs = self.training_jobs if training else self.test_jobs
         for job in jobs:
-            dataset = job(dataset, self.params)
-            print(f'Data shape: {dataset.trajectories.shape}')
+            dataset = job(dataset, self.config)
+            print(f"Data shape: {dataset.trajectories.shape}")
         return dataset

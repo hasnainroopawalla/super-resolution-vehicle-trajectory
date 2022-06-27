@@ -1,85 +1,44 @@
 import haversine as hs
 from haversine import Unit
 import numpy as np
-from typing import Generator, List, Tuple
+from typing import Generator, Tuple
 import statistics as st
 
-
-def minmax_denormalize(z: np.ndarray, min_val: float, max_val: float) -> np.ndarray:
-    """Performs Min-Max denormalization on the normalized array.
-
-    Args:
-        z (np.ndarray): The normalized array.
-        min_val (float): The minimum value of the array.
-        max_val (float): The maximum value of the array.
-
-    Returns:
-        np.ndarray: The denormalized array.
-    """
-    return z * (max_val - min_val) + min_val
-
-
-def z_score_normalize(X: np.ndarray):
-    """Performs Z-Score Normalization on the array.
-
-    Args:
-        X (np.ndarray): The input array.
-
-    Returns:
-        Tuple[np.ndarray, float, float]: The normalized array along with the mean and standard deviation values required for denormalization.
-    """
-    mean = X.mean(axis=(0, 1), keepdims=True)
-    std = X.std(axis=(0, 1), keepdims=True)
-    return (X - mean) / std, mean, std
-
-
-def z_score_denormalize(z: np.ndarray, mean: float, std: float):
-    """Performs Z-Score denormalization on the normalized array.
-
-    Args:
-        z (np.ndarray): The normalized array.
-        mean (float): The mean of the array.
-        std (float): The standard deviation of the array.
-
-    Returns:
-        np.ndarray: The denormalized array.
-    """
-    return z * std + mean
+from data import Dataset
 
 
 def generate_minibatches(
-    X: np.ndarray,
-    masks: np.ndarray,
-    deltas: np.ndarray,
-    batch_size: int,
-    shuffle: bool = False,
-) -> Generator[Tuple[np.ndarray, np.ndarray, np.ndarray], None, None]:
+    dataset: Dataset, batch_size: int, shuffle: bool = False
+) -> Generator[Dataset, None, None]:
     """Generate batches of the data based on the batch_size.
     This method also handles cases where the number of samples is not divisible by the batch size.
     Example:
         X.shape -> (50, 7)
-        y.shape -> (50, 1)
         batch_size -> 15
-        generate_minibatches(X, y, batch_size) -> batches returned of shapes (for X) -> (15, 7), (15, 7), (15, 7), (5, 7)
+        generate_minibatches(X, batch_size) -> batches returned of shapes (for X) -> (15, 7), (15, 7), (15, 7), (5, 7)
     Args:
-        X (np.ndarray): The input data.
-        y (np.ndarray): The true labels of the data.
+        dataset (Dataset): The input dataset.
         batch_size (int): An integer which determines the size of each batch (number of samples in each batch).
         shuffle (bool, optional): A flag which determines if the training set should be shuffled before batches are created. Defaults to False.
     Yields:
-        np.ndarray: Batches for X of size batch_size (same np.adarray format as X and y).
-        np.ndarray: Batches for y of size batch_size (same np.adarray format as X and y).
+        Dataset: A minibatch Dataset object.
     """
     if shuffle:
-        indices = np.arange(X.shape[0])
+        indices = np.arange(dataset.trajectories.shape[0])
         np.random.shuffle(indices)
-    for start_idx in range(0, X.shape[0], batch_size):
-        end_idx = min(start_idx + batch_size, X.shape[0])
+    for start_idx in range(0, dataset.trajectories.shape[0], batch_size):
+        end_idx = min(start_idx + batch_size, dataset.trajectories.shape[0])
         if shuffle:
             batch = indices[start_idx:end_idx]
         else:
             batch = slice(start_idx, end_idx)
-        yield X[batch], masks[batch], deltas[batch]
+        dataset_minibatch = Dataset()
+        dataset_minibatch.trajectories, dataset_minibatch.masks, dataset_minibatch.deltas = (
+            dataset.trajectories[batch],
+            dataset.masks[batch],
+            dataset.deltas[batch],
+        )
+        yield dataset_minibatch
 
 
 def haversine_distance(
@@ -106,17 +65,17 @@ def average_distance_error(
     actual_trajectories: np.ndarray,
     masks: np.ndarray,
 ) -> Tuple[float, float]:
-    """Computes the average distance error between the estimated trajectory and the actual trajectory.
+    """Computes the average distance error between the estimated trajectory and the actual trajectory for missing/downsampled values.
 
     Args:
         predicted_trajectories (np.ndarray): An array of predicted/estimated trajectories.
         actual_trajectories (np.ndarray): An array of ground-truth trajectories.
-        masks (np.ndarray): An array representing the observed and missing values in the trajectories.
+        masks (np.ndarray): The mask vector representing the observed and missing values in the trajectories.
 
     Returns:
-        Tuple[float, float, float]: The mean, standard deviation and median of the error values.
+        float: The average distance error on the missing/downsampled values.
     """
-    entire_trajectory_error, missing_values_error = [], []
+    masked_error = []
     for predicted, actual, mask in zip(
         predicted_trajectories, actual_trajectories, masks
     ):
@@ -125,6 +84,5 @@ def average_distance_error(
                 predicted_value[0], predicted_value[1], actual_value[0], actual_value[1]
             )
             if mask_value[0] == 0:
-                missing_values_error.append(error)
-            entire_trajectory_error.append(error)
-    return st.mean(entire_trajectory_error), st.mean(missing_values_error)
+                masked_error.append(error)
+    return st.mean(masked_error)

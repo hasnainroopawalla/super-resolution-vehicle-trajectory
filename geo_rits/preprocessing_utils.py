@@ -1,4 +1,5 @@
-from typing import Dict, Tuple
+from typing import Dict
+import pickle
 from tqdm import tqdm
 import numpy as np
 from numpy.lib.stride_tricks import sliding_window_view
@@ -6,6 +7,7 @@ import haversine as hs
 from haversine import Unit
 
 from data import Dataset
+from config import Config
 
 # def downsample_subtrip(subtrip: pd.DataFrame):
 #     # Adaptive Downsampling on a single subtrip.
@@ -21,31 +23,28 @@ from data import Dataset
 #     return subtrip_downsampled
 
 
-def create_trajectories(dataset: Dataset, params: Dict) -> np.ndarray:
+def create_trajectories(dataset: Dataset, config: Config) -> Dataset:
     """Creates shorter sequences/trajectories of the subtrips using the sliding window approach.
 
     Args:
-        subtrips (pd.DataFrame): A collection of pre-processed subtrips.
-        trajectory_len (int): The number of samples in each trajectory (sliding window size).
-        stride (int): The number of steps the sliding window moves by each iteration.
+        dataset (Dataset): The dataset object.
+        config (Config): The set of parameters used for training.
 
     Returns:
-        np.ndarray: An array of all the generated trajectories from the subtrips.
+        Dataset: The dataset object after creating trajectories and the mask vector.
     """
     print("Creating trajectories and masks..")
     trajectories, masks = np.array([]), np.array([])
     for subtrip, mask in tqdm(
         zip(dataset.trajectories, dataset.masks), total=len(dataset.trajectories)
     ):
-        if len(subtrip) < params["traj_len"]:
+        if len(subtrip) < config.traj_len:
             continue
         trajectories_subset = np.squeeze(
-            sliding_window_view(subtrip, (params["traj_len"], 2))[:: params["stride"]],
-            axis=1,
+            sliding_window_view(subtrip, (config.traj_len, 2))[:: config.stride], axis=1
         )
         masks_subset = np.squeeze(
-            sliding_window_view(mask, (params["traj_len"], 2))[:: params["stride"]],
-            axis=1,
+            sliding_window_view(mask, (config.traj_len, 2))[:: config.stride], axis=1
         )
         if len(trajectories) == 0:
             trajectories = trajectories_subset
@@ -57,15 +56,16 @@ def create_trajectories(dataset: Dataset, params: Dict) -> np.ndarray:
     return dataset
 
 
-def create_delta_vector(dataset: Dataset, params: Dict) -> np.ndarray:
-    """Creates the delta vector given the masks.
+def create_delta_vector(dataset: Dataset, config: Config) -> Dataset:
+    """Creates the delta vector given the mask vector.
     This vector represents the time gaps in the input series between observed values.
 
     Args:
-        masks (np.ndarray): The mask vector 'm'.
+        dataset (Dataset): The dataset object.
+        config (Config): The set of parameters used for training.
 
     Returns:
-        np.ndarray: The delta vector.
+        Dataset: The dataset object with the computed delta vector.
     """
     print("Creating deltas..")
     deltas = []
@@ -88,7 +88,16 @@ def create_delta_vector(dataset: Dataset, params: Dict) -> np.ndarray:
     return dataset
 
 
-def reverse_trajectories(dataset: Dataset, params: Dict):
+def reverse_trajectories(dataset: Dataset, config: Config) -> Dataset:
+    """Reverses the trajectories and appends them to original dataset.
+
+    Args:
+        dataset (Dataset): The dataset object.
+        config (Config): The set of parameters used for training.
+
+    Returns:
+        Dataset: The dataset object after reversing and appending all trajectories.
+    """
     print("Reversing and appending trajectories..")
     dataset.trajectories = np.concatenate(
         (dataset.trajectories, dataset.trajectories[:, ::-1, :])
@@ -98,15 +107,15 @@ def reverse_trajectories(dataset: Dataset, params: Dict):
     return dataset
 
 
-def remove_short_distance_trajectories(dataset: Dataset, params: Dict) -> np.ndarray:
-    """Removes all trajectories where the truck travels less than a threshold.
+def remove_short_distance_trajectories(dataset: Dataset, config: Config) -> Dataset:
+    """Removes all trajectories where the truck travels less than a threshold (determined by traj_dist).
 
     Args:
-        X (np.ndarray): The input trajectories.
-        traj_dist (int, optional): The minimum distance threshold in meters.
+        dataset (Dataset): The dataset object.
+        config (Config): The set of parameters used for training.
 
     Returns:
-        np.ndarray: An array only containing trajectories where the truck travels more than the distance threshold.
+        Dataset: The dataset object after discarding all trajectories of short distances.
     """
     print("Removing short distance trajectories (traj_dist)..")
     indices = []
@@ -120,7 +129,7 @@ def remove_short_distance_trajectories(dataset: Dataset, params: Dict) -> np.nda
                 (seq[sample - 1][0], seq[sample - 1][1]),
                 unit=Unit.METERS,
             )
-        if dist_covered >= params["traj_dist"]:
+        if dist_covered >= config.traj_dist:
             indices.append(idx)
     dataset.trajectories = np.array([dataset.trajectories[i] for i in indices])
     dataset.masks = np.array([dataset.masks[i] for i in indices])
@@ -129,20 +138,21 @@ def remove_short_distance_trajectories(dataset: Dataset, params: Dict) -> np.nda
 
 
 def remove_first_sample_missing_trajectories(
-    dataset: Dataset, params: Dict
-) -> np.ndarray:
-    """Discards all trajectories where the first and last sample is missing.
+    dataset: Dataset, config: Config
+) -> Dataset:
+    """Discards all trajectories where the first sample is missing.
 
     Args:
-        trajectories (np.ndarray): The input trajectories.
+        dataset (Dataset): The dataset object.
+        config (Config): The set of parameters used for training.
 
     Returns:
-        np.ndarray: An array only containing trajectories where the first and last sample are observed.
+        Dataset: The dataset object after discarding trajectories where the first sample is missing.
     """
     print("Removing first sample missing trajectories..")
     indices = []
     for idx, seq in tqdm(enumerate(dataset.masks), total=len(dataset.masks)):
-        if seq[0][0] == 1:# and seq[-1][0] == 1:
+        if seq[0][0] == 1:
             indices.append(idx)
     dataset.trajectories = np.array([dataset.trajectories[i] for i in indices])
     dataset.masks = np.array([dataset.masks[i] for i in indices])
@@ -150,16 +160,25 @@ def remove_first_sample_missing_trajectories(
     return dataset
 
 
-def minmax_normalize(dataset: Dataset, params: Dict) -> Tuple[np.ndarray, float, float]:
-    """Performs Min-Max Normalization on the array.
+def minmax_normalize(dataset: Dataset, config: Config) -> Dataset:
+    """Performs Min-Max Normalization on the dataset.
 
     Args:
-        X (np.ndarray): The input array.
+        dataset (Dataset): The dataset object.
+        config (Config): The set of parameters used for training.
 
     Returns:
-        Tuple[np.ndarray, float, float]: The normalized array along with the min and max values required for denormalization.
+        Dataset: The dataset object after normalizing the coordinate values and saving the min-max values required for denormalization.
     """
+    print("Normalizing values..")
     min_val = dataset.trajectories.min(axis=(0, 1), keepdims=True)
     max_val = dataset.trajectories.max(axis=(0, 1), keepdims=True)
     dataset.trajectories = (dataset.trajectories - min_val) / (max_val - min_val)
+
+    if config.training:
+        # Save normalizing params if the model is in training mode
+        pickle.dump(
+            {"min_val": min_val, "max_val": max_val},
+            open(f"models/{config.model_name}/normalizing_params.data", "wb"),
+        )
     return dataset
