@@ -4,6 +4,7 @@ from dataclasses import dataclass
 @dataclass
 class Config:
     model_name: str = "model"
+    data_path: str = "data"
     traj_len: int = 30
     stride: int = 4
     traj_dist: int = 1000  # meters

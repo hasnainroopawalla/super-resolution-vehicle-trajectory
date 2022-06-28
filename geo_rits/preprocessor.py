@@ -8,9 +8,7 @@ from preprocessing_utils import (
     create_trajectories,
     reverse_trajectories,
     remove_short_distance_trajectories,
-    remove_first_sample_missing_trajectories
-    # minmax_normalize,
-    ,
+    remove_first_sample_missing_trajectories,
 )
 
 
@@ -22,8 +20,7 @@ class Preprocessor:
             create_delta_vector,
             reverse_trajectories,
             remove_short_distance_trajectories,
-            remove_first_sample_missing_trajectories
-            # minmax_normalize,
+            remove_first_sample_missing_trajectories,
         ]
         self.test_jobs: List[Callable] = []
 

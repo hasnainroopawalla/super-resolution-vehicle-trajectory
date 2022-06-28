@@ -1,9 +1,10 @@
+from typing import List
 import tensorflow as tf
 import numpy as np
 from data import Dataset
 from config import Config
 from preprocessor import Preprocessor
-import keras
+from keras.optimizers.optimizer_v2.optimizer_v2 import OptimizerV2
 
 from helpers import (
     generate_minibatches,
@@ -15,9 +16,7 @@ from rits import RITS
 
 
 def step(
-    model: RITS,
-    optimizer: keras.optimizers.optimizer_v2.optimizer_v2.OptimizerV2,
-    training_set_minibatch: Dataset,
+    model: RITS, optimizer: OptimizerV2, training_set_minibatch: Dataset
 ) -> np.ndarray:
     """A single iteration during training.
 
@@ -40,14 +39,14 @@ def step(
     return custom_loss
 
 
-def train(config: Config) -> None:
+def train(config: Config, subtrips: List[np.ndarray], masks: List[np.ndarray]) -> None:
     """Trains the model with the specified parameters.
 
     Args:
         config (Config): A collection of model parameters.
+        subtrips (List[np.ndarray]): A list of subtrips for training the model.
+        masks (List[np.ndarray]): The mask vector representing the missing and observed values in the subtrips.
     """
-    subtrips, masks = load_data("data")
-
     P = Preprocessor(config)
     training_set = P.preprocess(subtrips, masks, training=True)
     model, optimizer = initialize_model(config, training_set)
@@ -71,4 +70,6 @@ def train(config: Config) -> None:
 
 
 if __name__ == "__main__":
-    train(Config())
+    config = Config()
+    subtrips, masks = load_data(config.data_path)
+    train(config, subtrips, masks)

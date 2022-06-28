@@ -115,7 +115,6 @@ class RITS(Model):
         )
 
         imputations = []
-        # all_imputations = []
         custom_loss = 0.0
 
         for t in range(self.sequence_length):
@@ -169,7 +168,6 @@ class RITS(Model):
             c_c = m * x + (1 - m) * c_hat
 
             imputations.append(c_c)
-            # all_imputations.append(c_hat)
             inputs = tf.concat([c_c, m], axis=1)
 
             _, h, c = self.rnn_cell(tf.expand_dims(inputs, axis=1), [h, c])
@@ -177,5 +175,4 @@ class RITS(Model):
         imputations = tf.concat(
             [tf.expand_dims(f, axis=1) for f in imputations], axis=1
         )
-        # all_imputations = tf.concat([tf.expand_dims(f, axis=1) for f in all_imputations], axis=1)
         return imputations, custom_loss

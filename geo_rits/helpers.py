@@ -4,7 +4,7 @@ import numpy as np
 from typing import Generator, Tuple, List, Dict
 import statistics as st
 import pickle
-import keras
+from keras.optimizers.optimizer_v2.optimizer_v2 import OptimizerV2
 import tensorflow as tf
 
 from data import Dataset
@@ -139,9 +139,7 @@ def load_normalizing_params(model_path: str) -> Dict[str, float]:
     return normalizing_params
 
 
-def initialize_model(
-    config: Config, dataset: Dataset
-) -> Tuple[RITS, keras.optimizers.optimizer_v2.optimizer_v2.OptimizerV2]:
+def initialize_model(config: Config, dataset: Dataset) -> Tuple[RITS, OptimizerV2]:
     """Initializes the model with the specified parameters.
 
     Args:

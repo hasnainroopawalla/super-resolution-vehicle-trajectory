@@ -27,7 +27,6 @@ share/python-wheels/
 *.egg
 MANIFEST
 ignore/
-data/
 models/
 .DS_Store
 .vscode/
