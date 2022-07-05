@@ -28,16 +28,71 @@ A few randomly sampled, preprocessed subtrips plotted on the map are shown below
     <img src="docs/subtrips.PNG" alt="Subtrips example" width="500"/>
 </p>
 
+
 ## Results
 
-Training and Validation Error:
+### Training and Validation Error
 
 <p align="center">
   <img src="docs/loss.png" width="400" />
 </p>
 
-Training and Validation Loss:
+### Training and Validation Loss
 
 <p align="center">
   <img src="docs/errors.png" width="400" />
 </p>
+
+### Qualitative results
+
+<p align="center">
+  <img src="docs/result1.png" width="600" />
+</p>
+
+<p align="center">
+  <img src="docs/result2.png" width="600" />
+</p>
+
+### Quantitative results
+
+<p align="center">
+  <img src="docs/quantitative_results.png" width="600" />
+</p>
+
+
+## Instructions
+
+1. Set the hyper-parameters in the [`Config`](https://github.com/hasnainroopawalla/super-resolution-vehicle-trajectory/blob/master/geo_rits/config.py) class. The final set of hyper-parameters used in this thesis are as follows:
+   ```python
+   class Config:
+    model_name: str = "model"
+    data_path: str = "data"
+    traj_len: int = 30
+    stride: int = 4
+    traj_dist: int = 1000  # meters
+    epochs: int = 500
+    learning_rate: float = 1e-4
+    batch_size: int = 128
+    hid_dim: int = 100
+    load_weights: bool = False
+    checkpoint_freq: int = 10
+    training: bool = True
+   ```
+2. Navigate to the `geo_rits` package
+   ```
+   $ cd geo_rits
+   ```
+3. Begin model training
+   ```
+   $ python3 train.py
+   ```
+4. The trained model can be found in the `models/` directory.
+
+> An example of the input subtrips and masks can be found in the `data/` directory.
+
+
+## Acknowledgments
+
+The original publication of the `RITS` architecture- "BRITS: Bidirectional Recurrent Imputation for Time Series, Wei Cao, Dong Wang, Jian Li, Hao Zhou, Lei Li Yitan Li. (NerIPS 2018)" can be found [here](http://papers.nips.cc/paper/7911-brits-bidirectional-recurrent-imputation-for-time-series).
+
+The TensorFlow implementation of the original `RITS` architecture used in this project can be found [here](https://github.com/SpyrosMouselinos/BRITSTF2).
