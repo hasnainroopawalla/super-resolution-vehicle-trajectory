@@ -1,1 +1,43 @@
 # Super-Resolution Vehicle Trajectory using Recurrent Time Series Imputation
+
+
+## Aim
+
+This is a Master Thesis project conducted at Uppsala University, Sweden and Scania CV AB. The original publication can be found [here](http://urn.kb.se/resolve?urn=urn:nbn:se:uu:diva-478010).
+
+This thesis aims to increase the temporal resolution of the data (vehicle trips) using deep neural networks. Given a temporally ordered sequence of geospatial coordinates indicating a truck’s trajectory, the objective is to estimate the intermediate positions of the truck. Furthermore, the model should implicitly learn the actual road network and predict feasible positions of the truck. An example of a trip where a truck collects data every 10 minutes can be found in Table 1.
+
+<p align="center">
+    <img src="docs/table1.png" alt="Table 1" width="500"/>
+</p>
+
+The objective is to double the frequency of the data, i.e., to generate intermediate latitude and longitude values for the truck every 5 minutes, which can be found in Table 2.
+
+<p align="center">
+    <img src="docs/table2.png" alt="Table 2" width="500"/>
+</p>
+
+
+## Preprocessing
+
+The `Preprocessor` class can be found [here](https://github.com/hasnainroopawalla/super-resolution-vehicle-trajectory/blob/master/geo_rits/preprocessor.py) and the preprocessing utilities can be found [here](https://github.com/hasnainroopawalla/super-resolution-vehicle-trajectory/blob/master/geo_rits/preprocessing_utils.py).
+
+A few randomly sampled, preprocessed subtrips plotted on the map are shown below:
+
+<p align="center">
+    <img src="docs/subtrips.PNG" alt="Subtrips example" width="500"/>
+</p>
+
+## Results
+
+Training and Validation Error:
+
+<p align="center">
+  <img src="docs/loss.png" width="400" />
+</p>
+
+Training and Validation Loss:
+
+<p align="center">
+  <img src="docs/errors.png" width="400" />
+</p>
