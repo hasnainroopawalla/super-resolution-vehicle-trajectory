@@ -1,9 +1,9 @@
 # Super-Resolution Vehicle Trajectory using Recurrent Time Series Imputation
 
+This repository is a Master Thesis project conducted at Scania CV AB and Uppsala University, Sweden. The thesis publication can be found [here](http://urn.kb.se/resolve?urn=urn:nbn:se:uu:diva-478010).
+
 
 ## Aim
-
-This is a Master Thesis project conducted at Uppsala University, Sweden and Scania CV AB. The original publication can be found [here](http://urn.kb.se/resolve?urn=urn:nbn:se:uu:diva-478010).
 
 This thesis aims to increase the temporal resolution of the data (vehicle trips) using deep neural networks. Given a temporally ordered sequence of geospatial coordinates indicating a truck’s trajectory, the objective is to estimate the intermediate positions of the truck. Furthermore, the model should implicitly learn the actual road network and predict feasible positions of the truck. An example of a trip where a truck collects data every 10 minutes can be found in Table 1.
 
@@ -62,7 +62,11 @@ A few randomly sampled, preprocessed subtrips plotted on the map are shown below
 
 ## Instructions
 
-1. Set the hyper-parameters in the [`Config`](https://github.com/hasnainroopawalla/super-resolution-vehicle-trajectory/blob/master/geo_rits/config.py) class. The final set of hyper-parameters used in this thesis are as follows:
+1. Install the requirements
+   ```
+   $ pip install -r requirements.txt
+   ```
+2. Set the hyper-parameters in the [`Config`](https://github.com/hasnainroopawalla/super-resolution-vehicle-trajectory/blob/master/geo_rits/config.py) class. The final set of hyper-parameters used in this thesis are as follows:
    ```python
    class Config:
     model_name: str = "model"
@@ -78,15 +82,15 @@ A few randomly sampled, preprocessed subtrips plotted on the map are shown below
     checkpoint_freq: int = 10
     training: bool = True
    ```
-2. Navigate to the `geo_rits` package
+3. Navigate to the `geo_rits` package
    ```
    $ cd geo_rits
    ```
-3. Begin model training
+4. Begin model training
    ```
    $ python3 train.py
    ```
-4. The trained model can be found in the `models/` directory.
+5. The trained model can be found in the `models/` directory.
 
 > An example of the input subtrips and masks can be found in the `data/` directory.
 

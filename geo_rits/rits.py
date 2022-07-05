@@ -80,19 +80,11 @@ class TemporalDecay(Layer):
 
 
 class RITS(Model):
-    def __init__(
-        self,
-        internal_dim,
-        hid_dim,
-        sequence_length=None,
-        go_backwards=False,
-        name="Rits",
-    ):
+    def __init__(self, internal_dim, hid_dim, sequence_length=None, name="Rits"):
         super(RITS, self).__init__(name=name)
         self.hid_dim = hid_dim
         self.internal_dim = internal_dim
         self.sequence_length = sequence_length
-        self.go_backwards = go_backwards
         return
 
     def build(self, input_shape):
@@ -110,23 +102,17 @@ class RITS(Model):
     def call(self, values, masks, deltas):
         h = tf.zeros(shape=(values.shape[0], self.hid_dim))
         c = tf.zeros(shape=(values.shape[0], self.hid_dim))
-        longitude_loss = tf.constant(
+        loss_balancer = tf.constant(
             [[1, 0.5] for _ in range(len(values))], dtype=tf.float32
-        )
+        )  # Balance the effect of longitude and latitude in the loss function. Only required for coordinates close to the North or South Pole.
 
         imputations = []
         custom_loss = 0.0
 
         for t in range(self.sequence_length):
-
-            if self.go_backwards:
-                x = values[:, self.sequence_length - t - 1, :]
-                m = masks[:, self.sequence_length - t - 1, :]
-                d = deltas[:, self.sequence_length - t - 1, :]
-            else:
-                x = values[:, t, :]
-                m = masks[:, t, :]
-                d = deltas[:, t, :]
+            x = values[:, t, :]
+            m = masks[:, t, :]
+            d = deltas[:, t, :]
 
             ### History and Input Decay Conditioned on Deltas
             gamma_h = self.temp_decay_h(d)  # Page 4 equation(3)
@@ -137,7 +123,7 @@ class RITS(Model):
             err = ((tf.abs(x - x_hat) * m) / (tf.reduce_sum(m) + 1e-6)) + (
                 (tf.square(x - x_hat) * m) / (tf.reduce_sum(m) + 1e-6)
             )
-            err = err * longitude_loss
+            err = err * loss_balancer
             custom_loss += tf.reduce_sum(err, axis=1)
 
             x_c = m * x + (1 - m) * x_hat  # Page 4 Equation (2)
@@ -149,7 +135,7 @@ class RITS(Model):
             err = ((tf.abs(x - z_hat) * m) / (tf.reduce_sum(m) + 1e-6)) + (
                 (tf.square(x - z_hat) * m) / (tf.reduce_sum(m) + 1e-6)
             )
-            err = err * longitude_loss
+            err = err * loss_balancer
             custom_loss += tf.reduce_sum(err, axis=1)
 
             gamma_x = self.temp_decay_x(d)  # Page 4 equation(3)
@@ -162,7 +148,7 @@ class RITS(Model):
             err = ((tf.abs(x - c_hat) * m) / (tf.reduce_sum(m) + 1e-6)) + (
                 (tf.square(x - c_hat) * m) / (tf.reduce_sum(m) + 1e-6)
             )
-            err = err * longitude_loss
+            err = err * loss_balancer
             custom_loss += tf.reduce_sum(err, axis=1)
 
             c_c = m * x + (1 - m) * c_hat
