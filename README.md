@@ -1,6 +1,6 @@
 # Super-Resolution Vehicle Trajectory using Recurrent Time Series Imputation
 
-This repository is a Master Thesis project conducted at Scania CV AB and Uppsala University, Sweden. The thesis publication can be found [here](http://urn.kb.se/resolve?urn=urn:nbn:se:uu:diva-478010).
+This repository is a Master Thesis project conducted at [Scania CV AB](https://www.scania.com/) and [Uppsala University](https://www.uu.se/en), Sweden. The thesis publication can be found [here](http://urn.kb.se/resolve?urn=urn:nbn:se:uu:diva-478010).
 
 
 ## Aim
@@ -30,6 +30,7 @@ A few randomly sampled, preprocessed subtrips plotted on the map are shown below
 
 
 ## Results
+> The axes text in the following figures is black in color and may not be visible in dark mode.
 
 ### Training and Validation Error
 
